@@ -1,0 +1,68 @@
+-- FUNCTION: public.building_intersection_length(integer, boolean)
+
+-- DROP FUNCTION public.building_intersection_length(integer, boolean);
+
+CREATE OR REPLACE FUNCTION public.building_intersection_length(
+	table_ integer,
+	del boolean)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+DECLARE
+    r decimal;
+
+BEGIN
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', quote_ident('sp_'||table_||'_offset'));
+end if;
+
+EXECUTE format('
+	create table %s as 
+SELECT ST_Union(
+ ST_OffsetCurve(wkb_geometry,  0.00015),
+ ST_OffsetCurve(wkb_geometry,  -0.00015)
+) as track
+FROM %s;', quote_ident('sp_'||table_||'_offset'), quote_ident('sp_'||table_));
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', ('sp_'||table_||'_intersected_buildings'));
+end if;
+
+--find out which buildings intersect with this stripe
+EXECUTE format('
+create table %s as
+select distinct (wkb_geometry) from %s, buildings where st_intersects(%s.track, buildings.wkb_geometry) is true
+			   ', quote_ident('sp_'||table_||'_intersected_buildings'), ('sp_'||table_||'_offset'), ('sp_'||table_||'_offset'));
+
+if (del is true) then
+EXECUTE format('
+drop table %s ', ('sp_'||table_||'_intersection_lengths'));
+end if;
+
+--calculate the lengths of intersections building-stripe
+EXECUTE format('
+create table %s as
+select distinct st_length(st_intersection(%s.wkb_geometry, %s.track))*1000 as length from %s, %s
+			   ', ('sp_'||table_||'_intersection_lengths'), ('sp_'||table_||'_intersected_buildings'), ('sp_'||table_||'_offset'), ('sp_'||table_||'_intersected_buildings'), ('sp_'||table_||'_offset'));
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', ('sp_'||table_||'_buildings_sum'));
+end if;
+
+--get the sum of all intersections: 
+execute format('create table %s as select SUM(length) from %s;', ('sp_'||table_||'_buildings_sum'), ('sp_'||table_||'_intersection_lengths'));
+return;
+END
+
+$BODY$;
+
+ALTER FUNCTION public.building_intersection_length(integer, boolean)
+    OWNER TO postgres;

@@ -1,0 +1,38 @@
+--drop function crossings_number(integer, boolean);
+CREATE OR REPLACE FUNCTION public.crossings_number(
+	table_ integer,
+	del boolean)
+    RETURNS void
+AS $BODY$
+
+DECLARE
+    r integer;
+
+BEGIN
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', quote_ident('sp_'||table_||'_crossings'));
+end if;
+
+EXECUTE format('
+	create table %s as
+select crossings.wkb_geometry from crossings, %s
+GROUP BY crossings.wkb_geometry
+HAVING st_intersects(ST_Buffer(crossings.wkb_geometry, 0.000001), ST_Collect(%s.wkb_geometry)) is true;
+', quote_ident('sp_'||table_||'_crossings'), quote_ident('sp_'||table_), quote_ident('sp_'||table_));
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', quote_ident('sp_'||table_||'_crossings_sum'));
+end if;
+
+--get the sum of all intersections: 
+execute format('create table %s as select count(*) from %s;', ('sp_'||table_||'_crossings_sum'), ('sp_'||table_||'_crossings'));
+return;
+END
+
+$BODY$
+LANGUAGE plpgsql;
+
+select crossings_number (3, true);

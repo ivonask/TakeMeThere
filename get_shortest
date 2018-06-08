@@ -1,0 +1,30 @@
+CREATE OR REPLACE FUNCTION get_shortest(x integer, y integer, n integer, del boolean) RETURNS void AS
+$BODY$
+DECLARE
+    r integer;
+BEGIN
+
+	if (del) then 
+		drop table myroute;
+	end if;
+	
+	create table myroute as select * FROM pgr_ksp(
+    'SELECT id, source, target, st_length(wkb_geometry) as cost, st_length(wkb_geometry) as reverse_cost FROM edges_noded',
+      x, y, n
+  	) as di
+  	join edges_noded on di.edge = edges_noded.id;
+
+    FOR r IN 1..n
+    LOOP
+			if (del is true) then
+				EXECUTE format('
+				drop table %s ', quote_ident('sp_'||r));
+			end if;
+			EXECUTE format('create table %s as select * from myroute where path_id=%L;', quote_ident('sp_'||(r)), r);
+    END LOOP;
+    RETURN;
+END
+$BODY$
+LANGUAGE plpgsql;
+
+select get_shortest(921, 90, 3, true);

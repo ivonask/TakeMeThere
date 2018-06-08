@@ -1,0 +1,48 @@
+CREATE OR REPLACE FUNCTION get_optimal_path(node1 integer, node2 integer, n integer, del boolean) RETURNS void AS
+$BODY$
+DECLARE
+    r integer;
+	w_buildings decimal := 0.5; 
+	w_POI decimal := 0.5; 
+	w_crossings decimal := 0.5; 
+	w_complexity decimal := 0.5; 
+BEGIN
+
+--get n shortest paths in tables sp_n
+ get_shortest(node1, node2, n, true);
+
+FOR r IN 1..n
+    LOOP
+		select building_intersection_length(r, true);
+		select crossings_number(r, true); 
+		select restaurants_number(r, true);
+		select path_complexity(r, true);
+	END LOOP;
+	
+create table info (
+	path_id 		integer, 
+	path_complexity	integer, 
+	building_length	decimal, 
+	crossings		integer, 
+	restaurants		integer, 
+	total			decimal
+);
+	
+insert into info (path_complexity, 
+	building_length, 
+	crossings, 
+	restaurants)
+   SELECT SUM(sp_1_complexity_sum.count), SUM(sp_1_buildings_sum.sum), SUM(sp_1_crossings_sum.count), SUM(sp_1_restaurants_sum.count)
+   FROM sp_1_complexity_sum, sp_1_buildings_sum, sp_1_crossings_sum, sp_1_restaurants_sum;
+
+--insert into info values (1, 'select count from sp_1_complexity, sp_1_buildings_sum.length', sp_1_crossings_sum.count, sp_1_restaurants_sum.count,
+--					 sp_1_complexity.count*w_complexity, sp_1_buildings_sum.length*w_buildings, sp_1_crossings_sum.count*w_crossings, 
+--				  	sp_1_restaurants_sum.count*w_POI);
+
+return;
+END
+$BODY$
+LANGUAGE plpgsql;
+
+select get_optimal_path(921, 90, 3, true)
+

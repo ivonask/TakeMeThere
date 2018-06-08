@@ -1,0 +1,33 @@
+-- FUNCTION: public.path_complexity(integer, boolean)
+
+-- DROP FUNCTION public.path_complexity(integer, boolean);
+
+CREATE OR REPLACE FUNCTION public.path_complexity(
+	table_ integer,
+	del boolean)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+AS $BODY$
+
+BEGIN
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', quote_ident('sp_'||table_||'_complexity'));
+end if;
+
+EXECUTE format('
+	create table %s as select distinct (the_geom) from edges_noded_vertices_pgr, %s where st_intersects(edges_noded_vertices_pgr.the_geom, %s.wkb_geometry) is true
+', quote_ident('sp_'||table_||'_complexity'), quote_ident('sp_'||table_), quote_ident('sp_'||table_));
+
+if (del is true) then
+EXECUTE format('
+	drop table %s ', quote_ident('sp_'||table_||'_complexity_sum'));
+end if;
+
+--get the sum of all intersections: 
+execute format('create table %s as select count(*) from %s;', ('sp_'||table_||'_complexity_sum'), ('sp_'||table_||'_complexity'));
+return;
+END
+
+$BODY$;
