@@ -1,48 +1,57 @@
-CREATE OR REPLACE FUNCTION get_optimal_path(node1 integer, node2 integer, n integer, del boolean) RETURNS void AS
-$BODY$
-DECLARE
-    r integer;
-	w_buildings decimal := 0.5; 
-	w_POI decimal := 0.5; 
-	w_crossings decimal := 0.5; 
-	w_complexity decimal := 0.5; 
-BEGIN
+--this query uses all the other functions to extract criteria values. Because of difficulties, using dynamic SQL the code is not optimal and the potential of other functions is not fully used.
 
 --get n shortest paths in tables sp_n
- get_shortest(node1, node2, n, true);
+select get_shortest(921, 90, 3, true);
 
-FOR r IN 1..n
-    LOOP
-		select building_intersection_length(r, true);
-		select crossings_number(r, true); 
-		select restaurants_number(r, true);
-		select path_complexity(r, true);
-	END LOOP;
-	
+drop table weights;
+create table weights (length decimal, complexity decimal, buildings decimal, crossings decimal, POI decimal);
+insert into weights values (100, 0.21, -10, 0.8, -10);
+
+select building_intersection_length(1, true);
+select crossings_number(1, true); 
+select restaurants_number(1, true);
+select path_complexity(1, true);
+
+select building_intersection_length(2, true);
+select crossings_number(2, true); 
+select restaurants_number(2, true);
+select path_complexity(2, true);
+
+select building_intersection_length(3, true);
+select crossings_number(3, true); 
+select restaurants_number(3, true);
+select path_complexity(3, true);
+
+drop table info;
+
 create table info (
-	path_id 		integer, 
+	path_length		decimal,
 	path_complexity	integer, 
 	building_length	decimal, 
 	crossings		integer, 
 	restaurants		integer, 
 	total			decimal
 );
-	
-insert into info (path_complexity, 
-	building_length, 
-	crossings, 
-	restaurants)
-   SELECT SUM(sp_1_complexity_sum.count), SUM(sp_1_buildings_sum.sum), SUM(sp_1_crossings_sum.count), SUM(sp_1_restaurants_sum.count)
-   FROM sp_1_complexity_sum, sp_1_buildings_sum, sp_1_crossings_sum, sp_1_restaurants_sum;
 
---insert into info values (1, 'select count from sp_1_complexity, sp_1_buildings_sum.length', sp_1_crossings_sum.count, sp_1_restaurants_sum.count,
---					 sp_1_complexity.count*w_complexity, sp_1_buildings_sum.length*w_buildings, sp_1_crossings_sum.count*w_crossings, 
---				  	sp_1_restaurants_sum.count*w_POI);
 
-return;
-END
-$BODY$
-LANGUAGE plpgsql;
+insert into info (path_length, path_complexity, building_length, crossings, restaurants, total)
+  SELECT SUM (ST_length(sp_1.wkb_geometry)*1000), MIN(sp_1_complexity_sum.count), MIN(sp_1_buildings_sum.sum), MIN(sp_1_crossings_sum.count), MIN(sp_1_restaurants_sum.count),
+  SUM (ST_length(sp_1.wkb_geometry)*1000)*MIN(weights.length)+MIN(sp_1_complexity_sum.count)*MIN(weights.complexity)+MIN(sp_1_buildings_sum.sum)*MIN(weights.buildings)+MIN(sp_1_crossings_sum.count)*MIN(weights.crossings)+MIN(sp_1_restaurants_sum.count)*MIN(weights.POI)
+  FROM sp_1, sp_1_complexity_sum, sp_1_buildings_sum, sp_1_crossings_sum, sp_1_restaurants_sum, weights;
+end;
 
-select get_optimal_path(921, 90, 3, true)
+insert into info (path_length, path_complexity, building_length, crossings, restaurants, total)
+  SELECT SUM (ST_length(sp_2.wkb_geometry)*1000), MIN(sp_2_complexity_sum.count), MIN(sp_2_buildings_sum.sum), MIN(sp_2_crossings_sum.count), MIN(sp_2_restaurants_sum.count),
+  SUM (ST_length(sp_2.wkb_geometry)*1000)*MIN(weights.length)+MIN(sp_2_complexity_sum.count)*MIN(weights.complexity)+MIN(sp_2_buildings_sum.sum)*MIN(weights.buildings)+MIN(sp_2_crossings_sum.count)*MIN(weights.crossings)+MIN(sp_2_restaurants_sum.count)*MIN(weights.POI)
+  FROM sp_2, sp_2_complexity_sum, sp_2_buildings_sum, sp_2_crossings_sum, sp_2_restaurants_sum, weights;
+end;
+
+insert into info (path_length, path_complexity, building_length, crossings, restaurants, total)
+  SELECT SUM (ST_length(sp_3.wkb_geometry)*1000), MIN(sp_3_complexity_sum.count), MIN(sp_3_buildings_sum.sum), MIN(sp_3_crossings_sum.count), MIN(sp_3_restaurants_sum.count),
+  SUM (ST_length(sp_3.wkb_geometry)*1000)*MIN(weights.length)+MIN(sp_3_complexity_sum.count)*MIN(weights.complexity)+MIN(sp_3_buildings_sum.sum)*MIN(weights.buildings)+MIN(sp_3_crossings_sum.count)*MIN(weights.crossings)+MIN(sp_3_restaurants_sum.count)*MIN(weights.POI)
+  FROM sp_3, sp_3_complexity_sum, sp_3_buildings_sum, sp_3_crossings_sum, sp_3_restaurants_sum, weights;
+end;
+
+select * from info;
+
 

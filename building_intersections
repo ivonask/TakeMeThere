@@ -1,3 +1,5 @@
+--function that calculates the length of intersection with all buildings along a path. Creates intermediate result in table sp_x_intersecton_lengths
+
 -- FUNCTION: public.building_intersection_length(integer, boolean)
 
 -- DROP FUNCTION public.building_intersection_length(integer, boolean);

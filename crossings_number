@@ -1,3 +1,5 @@
+----function that calculates the number of crossings along a path. Creates intermediate result in table sp_x_crossings
+
 --drop function crossings_number(integer, boolean);
 CREATE OR REPLACE FUNCTION public.crossings_number(
 	table_ integer,

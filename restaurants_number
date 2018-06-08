@@ -1,3 +1,5 @@
+--function calculates the number of bars and restraurants (stored seperately in table restaurants_bars) along a path.
+
 CREATE OR REPLACE FUNCTION public.restaurants_number(
 	table_ integer,
 	del boolean)

@@ -1,3 +1,5 @@
+--function calculates path complexity criterion
+
 -- FUNCTION: public.path_complexity(integer, boolean)
 
 -- DROP FUNCTION public.path_complexity(integer, boolean);

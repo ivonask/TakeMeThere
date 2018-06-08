@@ -1,3 +1,5 @@
+--function gets n shortest paths from x to y. Results are stored in tables sp_k
+
 CREATE OR REPLACE FUNCTION get_shortest(x integer, y integer, n integer, del boolean) RETURNS void AS
 $BODY$
 DECLARE
